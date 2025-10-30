@@ -1,5 +1,6 @@
 package myapps;
 
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
@@ -9,25 +10,35 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.ValueMapper;
 
-
-public class Pipe {
+public class LineSplit {
 	
 	public static void main (String[] args) throws Exception {
-		
 		Properties props = new Properties();
-		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-pipe");
+		
+		props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-linesplit");
 		props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 		
 		props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 		props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 		
 		final StreamsBuilder builder = new StreamsBuilder();
+		
 		KStream<String, String> source = builder.stream("streams-plaintext-input");
+		KStream<String, String> words = source.flatMapValues(value -> Arrays.asList(value.split("\\W+")));
+//		KStream<String, String> words = source.flatMapValues(new ValueMapper<String, Iterable<String>>() {
+//            @Override
+//            public Iterable<String> apply(String value) {
+//                return Arrays.asList(value.split("\\W+"));
+//            }
+//        });
 		
-		source.to("streams-pipe-output");
+		words.to("streams-linesplit-output");
 		
-		builder.stream("streams-plaintext-input").to("streams-pipe-output");
+//		source.to("streams-pipe-output");
+		
+//		builder.stream("streams-plaintext-input").to("streams-pipe-output");
 		
 		final Topology topology = builder.build();	
 		System.out.println(topology.describe());
